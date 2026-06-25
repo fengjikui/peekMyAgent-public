@@ -7,10 +7,7 @@
 If you already have Claude Code working, this is the shortest path:
 
 ```bash
-git clone https://github.com/fengjikui/peekMyAgent-public.git
-cd peekMyAgent-public
-npm link
-
+curl -fsSL https://raw.githubusercontent.com/fengjikui/peekMyAgent-public/main/install.sh | bash
 peekmyagent open
 cd <your-project>
 peekmyagent claude -c
@@ -54,6 +51,16 @@ claude -p --output-format text "Reply OK"
 ```
 
 ## Install From Source
+
+Recommended one-line install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fengjikui/peekMyAgent-public/main/install.sh | bash
+```
+
+The installer clones this repo to `~/.peekmyagent/app` and creates a CLI shim at `~/.local/bin/peekmyagent`. If `~/.local/bin` is not in your `PATH`, the installer prints the command you need to add.
+
+Manual install:
 
 Clone the repository and link the CLI:
 
@@ -271,16 +278,22 @@ Recommendations:
 
 ### `peekmyagent` command not found
 
-Run this in the repository:
+Run the installer again:
 
 ```bash
-npm link
+curl -fsSL https://raw.githubusercontent.com/fengjikui/peekMyAgent-public/main/install.sh | bash
 ```
 
-Or use the direct path:
+If the installer says `~/.local/bin` is not in your `PATH`, add this to your shell profile and restart the terminal:
 
 ```bash
-node /path/to/peekMyAgent/bin/peekmyagent.mjs open
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+You can also use the direct path:
+
+```bash
+node ~/.peekmyagent/app/bin/peekmyagent.mjs open
 ```
 
 ### Port 43110 is already in use
