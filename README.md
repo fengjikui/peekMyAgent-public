@@ -1,5 +1,27 @@
 # peekMyAgent
 
+[中文 README](README.zh-CN.md) | [Full User Guide](docs/user-guide.md)
+
+## Start Here
+
+If you already have Claude Code working, this is the shortest path:
+
+```bash
+git clone https://github.com/fengjikui/peekMyAgent-public.git
+cd peekMyAgent-public
+npm link
+
+peekmyagent open
+cd <your-project>
+peekmyagent claude -c
+```
+
+Then use Claude Code normally. Open `http://127.0.0.1:43110` or run `peekmyagent open` to inspect the captured requests.
+
+For the complete walkthrough, read the [User Guide](docs/user-guide.md).
+
+## Overview
+
 peekMyAgent is a local-first dashboard for inspecting what coding agents send to model providers.
 
 It helps you understand how tools such as Claude Code and OpenClaw assemble system prompts, user messages, tool definitions, tool results, history, model parameters, and raw request bodies before they reach the remote model.
