@@ -38,7 +38,7 @@ peekMyAgent is not meant to "steal hidden prompts". It is an observability tool 
 
 ## Requirements
 
-- macOS or a Unix-like shell environment.
+- macOS, Linux, WSL, or Git Bash/another Unix-like shell on Windows for the one-line installer.
 - Node.js 18 or newer.
 - Claude Code and/or OpenClaw already installed and working.
 - Your model provider configuration should already work in the terminal where you run the Agent.
@@ -49,6 +49,26 @@ If `claude` does not work by itself, fix that first:
 claude --version
 claude -p --output-format text "Reply OK"
 ```
+
+If Claude Code is configured through Claude Code settings instead of shell environment variables, peekMyAgent can also read `ANTHROPIC_BASE_URL` and related Claude Code environment values from:
+
+- `~/.claude/settings.json`
+- `~/.claude/settings.local.json`
+- `<your-project>/.claude/settings.json`
+- `<your-project>/.claude/settings.local.json`
+
+For example:
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://your-provider.example.com",
+    "ANTHROPIC_AUTH_TOKEN": "..."
+  }
+}
+```
+
+Explicit shell variables still win. Use `PEEK_CLAUDE_TARGET_BASE_URL` when you want to force the upstream URL for peekMyAgent without changing Claude Code's own config.
 
 ## Install From Source
 

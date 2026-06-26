@@ -162,6 +162,26 @@ peekmyagent run openclaw -- chat
 - 打印 dashboard URL 和 watch id。
 - Agent 退出后自动把 watch 标记为 `已停止`。
 
+如果 Claude Code 的上游配置不在 shell 环境变量里，而是在 Claude Code settings 文件里，peekMyAgent 会尝试读取这些位置：
+
+- `~/.claude/settings.json`
+- `~/.claude/settings.local.json`
+- `<当前项目>/.claude/settings.json`
+- `<当前项目>/.claude/settings.local.json`
+
+支持的典型写法：
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://your-provider.example.com",
+    "ANTHROPIC_AUTH_TOKEN": "..."
+  }
+}
+```
+
+优先级是：显式 shell 环境变量最高，其次是项目 `.claude/settings.local.json`，再往上回退到用户级 settings。需要只为 peekMyAgent 指定上游时，用 `PEEK_CLAUDE_TARGET_BASE_URL`。
+
 如果想启动 Agent 后自动打开 dashboard：
 
 ```bash

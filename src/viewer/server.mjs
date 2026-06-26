@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCaptureProxy, startSharedCaptureProxy } from "../core/capture-proxy.mjs";
+import { mergeClaudeCodeProcessEnv, resolveClaudeCodeTargetBaseUrl } from "../core/claude-code-settings.mjs";
 import { openPersistenceStore, watchIdFromSourceId } from "../core/persistence-store.mjs";
 import { clearViewerRegistry, writeViewerRegistry } from "../core/viewer-registry.mjs";
 import { resolveTraeCnDynamicRoute } from "../adapters/trae-cn-integration.mjs";
@@ -604,7 +605,7 @@ async function startWatch(req, { cwd, watches, store, sharedCaptureProxy }) {
     const persisted = findReusablePersistedWatch(store, { agent, mode, workspace, conversationId });
     if (persisted) return restorePersistedWatch(persisted, input, { watches, store, sharedCaptureProxy });
   }
-  const targetBaseUrl = input.target_base_url || resolveTargetBaseUrl(agent);
+  const targetBaseUrl = input.target_base_url || resolveTargetBaseUrl(agent, { workspace });
   if (!targetBaseUrl) {
     throw new Error(`Missing upstream base URL for ${agent}. Set ANTHROPIC_BASE_URL for Claude Code or OPENAI_BASE_URL/OPENCLAW_BASE_URL for OpenClaw before starting the viewer.`);
   }
@@ -666,7 +667,8 @@ async function startWatch(req, { cwd, watches, store, sharedCaptureProxy }) {
 
 async function reuseWatch(watch, input, { store, sharedCaptureProxy } = {}) {
   if (watch.status === "watching") return watchResponse(watch, { reused: true });
-  const targetBaseUrl = input.target_base_url || watch.target_base_url || resolveTargetBaseUrl(watch.agent);
+  const workspace = input.workspace || watch.workspace || null;
+  const targetBaseUrl = input.target_base_url || watch.target_base_url || resolveTargetBaseUrl(watch.agent, { workspace });
   if (!targetBaseUrl) throw new Error(`Missing upstream base URL for ${watch.agent}.`);
   if (sharedCaptureProxy) {
     watch.proxy = sharedCaptureProxy;
@@ -729,7 +731,8 @@ async function reuseWatch(watch, input, { store, sharedCaptureProxy } = {}) {
 async function restorePersistedWatch(source, input, { watches, store, sharedCaptureProxy } = {}) {
   const watchId = source.store_watch_id;
   if (!watchId) throw new Error("Persisted watch is missing store_watch_id");
-  const targetBaseUrl = input.target_base_url || resolveTargetBaseUrl(source.agent);
+  const workspace = input.workspace || source.workspace || null;
+  const targetBaseUrl = input.target_base_url || resolveTargetBaseUrl(source.agent, { workspace });
   if (!targetBaseUrl) throw new Error(`Missing upstream base URL for ${source.agent}.`);
   const captures = store?.loadCaptures(watchId) || [];
   let proxy = sharedCaptureProxy;
@@ -803,7 +806,7 @@ async function restorePersistedWatchForSharedProxy(watchId, { watches, store, sh
   const response = await restorePersistedWatch(
     source,
     {
-      target_base_url: resolveTargetBaseUrl(source.agent),
+      target_base_url: resolveTargetBaseUrl(source.agent, { workspace: source.workspace }),
       workspace: source.workspace,
       conversation_id: source.conversation_id,
       started_by: "shared-proxy-auto-restore",
@@ -930,14 +933,16 @@ function buildAgentSendCommand(watch, message) {
     const args = ["-p", "--output-format", "text"];
     if (watch.conversation_id) args.push("--resume", watch.conversation_id);
     args.push(message);
+    const cwd = watch.workspace || os.homedir();
     return {
       command: "claude",
       args,
-      cwd: watch.workspace || os.homedir(),
-      env: {
-        ...process.env,
-        ANTHROPIC_BASE_URL: watch.base_url,
-      },
+      cwd,
+      env: mergeClaudeCodeProcessEnv({
+        cwd,
+        env: process.env,
+        overrides: { ANTHROPIC_BASE_URL: watch.base_url },
+      }),
     };
   }
   if (/openclaw/i.test(watch.agent)) {
@@ -2797,8 +2802,8 @@ function liveWatchCommand(watch) {
   };
 }
 
-function resolveTargetBaseUrl(agent) {
-  if (/claude/i.test(agent)) return process.env.PEEK_CLAUDE_TARGET_BASE_URL || process.env.ANTHROPIC_BASE_URL || null;
+function resolveTargetBaseUrl(agent, { workspace } = {}) {
+  if (/claude/i.test(agent)) return resolveClaudeCodeTargetBaseUrl({ cwd: workspace || process.cwd(), env: process.env });
   if (/openclaw/i.test(agent)) {
     return process.env.PEEK_OPENCLAW_TARGET_BASE_URL || process.env.OPENCLAW_BASE_URL || process.env.OPENAI_BASE_URL || process.env.DEEPSEEK_BASE_URL || null;
   }

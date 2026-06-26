@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { normalizeOpenClawProxyCapture } from "../src/adapters/openclaw-proxy.mjs";
 import { normalizeClaudeOtelRequestFile } from "../src/adapters/claude-otel.mjs";
 import { disableTraeCn, enableTraeCn, inspectTraeCn, syncTraeCn } from "../src/adapters/trae-cn-integration.mjs";
+import { mergeClaudeCodeProcessEnv, resolveClaudeCodeTargetBaseUrl } from "../src/core/claude-code-settings.mjs";
 import { clearViewerRegistry, readViewerRegistry, viewerRegistryPath } from "../src/core/viewer-registry.mjs";
 import { openBrowser, startViewerServer } from "../src/viewer/server.mjs";
 
@@ -383,14 +384,17 @@ async function runAgent() {
 }
 
 async function runClaudeAgent(parsed, viewerUrl) {
-  const targetBaseUrl = process.env.PEEK_CLAUDE_TARGET_BASE_URL || process.env.ANTHROPIC_BASE_URL;
-  if (!targetBaseUrl) throw new Error("Missing ANTHROPIC_BASE_URL or PEEK_CLAUDE_TARGET_BASE_URL for Claude Code upstream.");
+  const workspace = process.cwd();
+  const targetBaseUrl = resolveClaudeCodeTargetBaseUrl({ cwd: workspace, env: process.env });
+  if (!targetBaseUrl) {
+    throw new Error("Missing Claude Code upstream base URL. Set PEEK_CLAUDE_TARGET_BASE_URL or ANTHROPIC_BASE_URL, or configure ANTHROPIC_BASE_URL in Claude Code settings.json.");
+  }
   const conversationId = inferClaudeConversationId(parsed.childArgs);
   const reuseWatchId = await resolveClaudeRunWatchChoice({ parsed, viewerUrl, conversationId });
   const watch = await postJson(`${trimSlash(viewerUrl)}/api/watch/start`, {
     agent: "Claude Code",
     mode: optionValueIn(parsed.wrapperArgs, "--mode") || "single_session",
-    workspace: process.cwd(),
+    workspace,
     conversation_id: conversationId,
     started_by: "peekmyagent-run",
     reuse: Boolean(reuseWatchId),
@@ -398,10 +402,15 @@ async function runClaudeAgent(parsed, viewerUrl) {
     target_base_url: targetBaseUrl,
   });
   printRunStarted({ viewerUrl, watch, command: "claude", args: parsed.childArgs });
-  const result = await runChild("claude", parsed.childArgs, {
-    ...process.env,
-    ANTHROPIC_BASE_URL: watch.base_url,
-  });
+  const result = await runChild(
+    "claude",
+    parsed.childArgs,
+    mergeClaudeCodeProcessEnv({
+      cwd: workspace,
+      env: process.env,
+      overrides: { ANTHROPIC_BASE_URL: watch.base_url },
+    }),
+  );
   await stopRunWatch(viewerUrl, watch, null);
   return result;
 }
