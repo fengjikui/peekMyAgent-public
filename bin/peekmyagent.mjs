@@ -896,14 +896,21 @@ async function canReachViewer(url) {
 }
 
 async function canReachDaemon(url) {
+  const ping = await fetchDaemonProbe(`${trimSlash(url)}/api/daemon/ping`, 600);
+  if (ping) return true;
+  const status = await fetchDaemonProbe(`${trimSlash(url)}/api/daemon/status`, 2500);
+  return Boolean(status);
+}
+
+async function fetchDaemonProbe(url, timeoutMs) {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 600);
-    const response = await fetch(`${trimSlash(url)}/api/daemon/status`, { signal: controller.signal });
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const response = await fetch(url, { signal: controller.signal });
     clearTimeout(timer);
     if (!response.ok) return false;
     const data = await response.json();
-    return Boolean(data?.shared_capture_proxy);
+    return Boolean(data?.shared_capture_proxy) ? data : false;
   } catch {
     return false;
   }

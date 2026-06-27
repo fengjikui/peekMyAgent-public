@@ -151,6 +151,7 @@ async function handleRequest(req, res, options) {
   if (url.pathname === "/api/agent/send" && req.method === "POST") return writeJson(res, 200, await sendAgentMessage(req, options));
   if (url.pathname === "/api/source/update" && req.method === "POST") return writeJson(res, 200, await updateSource(req, options));
   if (url.pathname === "/api/watch/status") return writeJson(res, 200, listWatchStatus(options));
+  if (url.pathname === "/api/daemon/ping") return writeJson(res, 200, daemonPing(options));
   if (url.pathname === "/api/daemon/status") return writeJson(res, 200, daemonStatus(options));
   if (url.pathname === "/api/daemon/shutdown" && req.method === "POST") {
     writeJson(res, 200, { ok: true, action: "shutdown", pid: process.pid });
@@ -1112,6 +1113,16 @@ function loadLiveWatchData(source, { watches }) {
     requests,
     turns,
     agent_trace: agentTrace,
+  };
+}
+
+function daemonPing({ sharedCaptureProxy }) {
+  return {
+    ok: true,
+    api: "viewer",
+    pid: process.pid,
+    capture_url: sharedCaptureProxy?.baseUrl || null,
+    shared_capture_proxy: Boolean(sharedCaptureProxy),
   };
 }
 
