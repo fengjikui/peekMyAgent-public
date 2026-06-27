@@ -159,7 +159,7 @@ async function handleRequest(req, res, options) {
     return;
   }
   if (url.pathname === "/api/view") {
-    const sourceId = url.searchParams.get("source") || options.demo || "openclaw-subagent";
+    const sourceId = url.searchParams.get("source") || options.demo || null;
     return writeJson(res, 200, loadViewerData(sourceId, options));
   }
   writeJson(res, 404, { error: "Not found" });
@@ -517,7 +517,7 @@ function translationAliasSlugs(agent) {
   return aliases;
 }
 
-function baseSources({ cwd, evidencePath, watches }) {
+function baseSources({ cwd, demo, evidencePath, watches }) {
   if (evidencePath) {
     const absPath = path.resolve(cwd, evidencePath);
     return [
@@ -534,10 +534,12 @@ function baseSources({ cwd, evidencePath, watches }) {
       },
     ];
   }
-  const defaultSources = DEFAULT_SOURCES.map((source) => {
-    const absPath = path.resolve(cwd, source.path);
-    return { ...source, path: absPath, available: hasCaptureFile(absPath), ...sourceListStats(absPath) };
-  });
+  const defaultSources = demo
+    ? DEFAULT_SOURCES.map((source) => {
+        const absPath = path.resolve(cwd, source.path);
+        return { ...source, path: absPath, available: hasCaptureFile(absPath), ...sourceListStats(absPath) };
+      })
+    : [];
   return [...activeWatchSources(watches), ...defaultSources];
 }
 
